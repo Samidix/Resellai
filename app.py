@@ -1,38 +1,55 @@
-import streamlit as st,requests,re
+import streamlit as st
+import requests
 from bs4 import BeautifulSoup
+import re
 
-st.set_page_config(page_title="ResellAI",layout="wide")
-st.markdown("""<style>*{font-family:'Cairo';direction:rtl;text-align:right}</style>""",unsafe_allow_html=True)
+st.set_page_config(page_title="ResellAI v2.0", page_icon="📈", layout="centered")
 
-def get_data(url):
- try:
-  r=requests.get(url,headers={"User-Agent":"Mozilla/5.0"},timeout=10)
-  s=BeautifulSoup(r.text,"html.parser")
-  title=s.find("h1").text.strip()
-  price=int(re.findall(r'(\d{4,7})',s.get_text())[0])
-  return title,price
- except:return None,0
+st.title("ResellAI 📈")
+st.subheader("v2.0")
+st.write("الصق رابط Ouedkniss")
 
-def get_price(n):
- try:
-  r=requests.get(f"https://www.google.com/search?q={n}+سعر+الجزائر",headers={"User-Agent":"Mozilla/5.0"})
-  p=[int(x) for x in re.findall(r'(\d{4,7})\s*DA',r.text)[:5]]
-  return int(sum(p)/len(p)) if p else 0
- except:return 0
+url = st.text_input("Ouedkniss رابط")
+repair_cost = st.number_input("تكلفة التصليح", min_value=0, value=0, step=1000)
 
-st.title("📈 ResellAI v2.0")
-url=st.text_input("الصق رابط Ouedkniss")
-repair=st.number_input("تكلفة التصليح",0,step=1000)
+def get_ouedkniss_price(url):
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        r = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(r.content, 'html.parser')
+        
+        price_tag = soup.find('span', class_='price')
+        price_text = price_tag.text if price_tag else "0"
+        price = int(re.sub(r'[^0-9]', '', price_text))
+        
+        title_tag = soup.find('h1')
+        title = title_tag.text.strip() if title_tag else "منتج"
+        
+        return title, price
+    except:
+        return None, None
+
 if st.button("حلل الآن"):
- t,b=get_data(url)
- if t:
-  m=get_price(t)
-  profit=m-b-repair
-  margin=(profit/(b+repair))*100 if b+repair>0 else 0
-  st.success(f"المنتج: {t}")
-  st.metric("السعر المعلن",f"{b:,} DA")
-  st.metric("سعر السوق",f"{m:,} DA")
-  st.metric("الربح المتوقع",f"{profit:,} DA")
-  if margin>=30:st.success(f"اشري ضرك 🔥 | الربح {margin:.1f}%")
-  elif margin>=15:st.warning(f"فكر فيها | الربح {margin:.1f}%")
-  else:st.error(f"ما تشريش | الربح {margin:.1f}%")
+    if url:
+        with st.spinner("نحلل في الإعلان..."):
+            title, price = get_ouedkniss_price(url)
+            
+            if price:
+                st.success(f"**المنتج:** {title}")
+                st.info(f"**السعر المعلن:** {price:,} DA")
+                
+                market_price = int(price * 1.3)
+                profit = market_price - price - repair_cost
+                
+                st.warning(f"**سعر السوق المتوقع:** {market_price:,} DA")
+                st.success(f"**الربح المتوقع:** {profit:,} DA")
+                
+                if profit > 15000:
+                    st.balloons()
+                    st.error("🔥 **القرار: اشري!!! صفقة**")
+                else:
+                    st.error("❌ **القرار: فوت** الربح قليل")
+            else:
+                st.error("ما قدرتش نقرا الإعلان. تأكد من الرابط")
+    else:
+        st.warning("الصق رابط أول")
