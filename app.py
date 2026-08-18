@@ -1,3 +1,4 @@
+npx @deepseek-ai/dsh web
 import streamlit as st
 
 st.set_page_config(page_title="ResellAI v2.0", page_icon="📈", layout="centered")
